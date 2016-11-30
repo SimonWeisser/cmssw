@@ -17,6 +17,16 @@ from TkAlExceptions import AllInOneError
 
 ######################################################################
 ######################################################################
+loadGlobalTagTemplate="""
+#Global tag
+process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
+from Configuration.AlCa.GlobalTag import GlobalTag
+process.GlobalTag = GlobalTag(process.GlobalTag,".oO[GlobalTag]Oo.")
+"""
+
+
+######################################################################
+######################################################################
 conditionsTemplate="""
 process.conditionsIn.oO[rcdName]Oo. = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
      connect = cms.string('.oO[connectString]Oo.'),
@@ -154,6 +164,7 @@ root_files=$($eos ls /store/caf/user/$USER/.oO[eosdir]Oo. \
 .oO[RunTrackSplitPlot]Oo.
 .oO[MergeZmumuPlots]Oo.
 
+
 # clean-up
 # ls -l *.root
 rm -f *.root
@@ -236,7 +247,7 @@ void TkAlExtendedOfflineValidation()
   .oO[extendedInstantiation]Oo.
   p.setOutputDir(".oO[datadir]Oo./ExtendedOfflineValidation_Images");
   p.setTreeBaseDir(".oO[OfflineTreeBaseDir]Oo.");
-  p.plotDMR(".oO[DMRMethod]Oo.",.oO[DMRMinimum]Oo.,".oO[DMROptions]Oo.");
+  p.plotDMR(".oO[DMRMethod]Oo.",.oO[DMRMinimum]Oo.,".oO[DMROptions]Oo.",".oO[xScale]Oo.",".oO[xScaleValue]Oo.");
   p.plotSurfaceShapes(".oO[SurfaceShapes]Oo.");
   p.plotChi2("root://eoscms//eos/cms/store/caf/user/$USER/.oO[eosdir]Oo./.oO[resultPlotFile]Oo._result.root");
 }

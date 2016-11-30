@@ -21,6 +21,12 @@ class OfflineValidation(GenericValidationData):
             "DMROptions":"",
             "OfflineTreeBaseDir":"",
             "SurfaceShapes":"",
+
+
+	    "xScale":"",
+	    "xScaleValue":"",
+
+
             }
 
         mandatories = [ "trackcollection" ]

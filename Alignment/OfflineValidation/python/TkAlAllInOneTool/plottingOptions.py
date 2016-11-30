@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 import os
 import random
 import globalDictionaries
@@ -177,6 +178,12 @@ class PlottingOptionsOffline(BasePlottingOptions):
                     "OfflineTreeBaseDir":"TrackHitFilter",
                     "SurfaceShapes":"coarse",
                     "bigtext":"false",
+
+
+		    "xScale":"minmax",
+		    "xScaleValue":"-5 5",
+
+
                    }
         defaults.update(addDefaults)
         mandatories = []

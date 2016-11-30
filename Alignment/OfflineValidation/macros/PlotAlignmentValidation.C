@@ -30,6 +30,7 @@
 #include "TF1.h"
 #include "TRegexp.h"
 #include "TLatex.h"
+// #include "TLeaf.h"
 
 // This line works only if we have a CMSSW environment...
 #include "Alignment/OfflineValidation/interface/TkOffTreeVariables.h"
@@ -584,7 +585,7 @@ void PlotAlignmentValidation::plotSS( const std::string& options, const std::str
 
 
 //------------------------------------------------------------------------------
-void PlotAlignmentValidation::plotDMR(const std::string& variable, Int_t minHits, const std::string& options)
+void PlotAlignmentValidation::plotDMR(const std::string& variable, Int_t minHits, const std::string& options, const std::string& xScale, const std::string& xScaleValue)
 {
   // If several, comma-separated values are given in 'variable',
   // call plotDMR with each value separately.
@@ -594,8 +595,8 @@ void PlotAlignmentValidation::plotDMR(const std::string& variable, Int_t minHits
   if ( findres != std::string::npos) {
     std::string substring1 = variable.substr(0,         findres);
     std::string substring2 = variable.substr(findres+1, std::string::npos);
-    plotDMR(substring1, minHits, options);
-    plotDMR(substring2, minHits, options);
+    plotDMR(substring1, minHits, options, xScale, xScaleValue);
+    plotDMR(substring2, minHits, options, xScale, xScaleValue);
     return;
    }
 
@@ -603,8 +604,8 @@ void PlotAlignmentValidation::plotDMR(const std::string& variable, Int_t minHits
   // X and Y added, respectively
   if (variable == "mean" || variable == "median" || variable == "meanNorm" ||
       variable == "rms" || variable == "rmsNorm") {
-    plotDMR(variable+"X", minHits, options);
-    plotDMR(variable+"Y", minHits, options);
+    plotDMR(variable+"X", minHits, options, xScale, xScaleValue);
+    plotDMR(variable+"Y", minHits, options, xScale, xScaleValue);
     return;
   }
 
@@ -616,6 +617,17 @@ void PlotAlignmentValidation::plotDMR(const std::string& variable, Int_t minHits
   // -layersSplit (splitted db for each layers/disc in one plot)
   // -layersSplitSeparate (splitted db, for each layers/disc in separate plots)
 
+    TTree *t1=new TTree();
+    if(variable == "medianX")
+    {
+      t1=new TTree("parameter", "DMR parameter");
+    }
+    else if(variable == "medianY")
+    {
+      t1=new TTree("parameterY", "DMR parameter y-axis");  
+    }
+  double paraDMR[3];
+  
   TRegexp layer_re("layer=[0-9]+");
   bool plotPlain = false, plotSplits = false, plotLayers = false;
   int plotLayerN = 0;
@@ -657,14 +669,17 @@ void PlotAlignmentValidation::plotDMR(const std::string& variable, Int_t minHits
   // width in cm
   // for DMRS, use 100 bins in range +-10 um, bin width 0.2um
   // if modified, check also TrackerOfflineValidationSummary_cfi.py and TrackerOfflineValidation_Standalone_cff.py
+  
+
+  
   if (variable == "meanX") {          plotinfo.nbins = 50;  plotinfo.min = -0.001; plotinfo.max = 0.001; }
   else if (variable == "meanY") {     plotinfo.nbins = 50;  plotinfo.min = -0.005; plotinfo.max = 0.005; }
   else if (variable == "medianX")
-    if (plotSplits) {                 plotinfo.nbins = 50;  plotinfo.min = -0.0005; plotinfo.max = 0.0005;}
-    else {                            plotinfo.nbins = 100;  plotinfo.min = -0.001; plotinfo.max = 0.001; }
+    if (plotSplits) {                 plotinfo.nbins = 100;  plotinfo.min = 0.1; plotinfo.max = 0.1;}
+    else {                            plotinfo.nbins = 100;  plotinfo.min = 0.1; plotinfo.max = 0.1; }
   else if (variable == "medianY")
-    if (plotSplits) {                 plotinfo.nbins = 50;  plotinfo.min = -0.0005; plotinfo.max = 0.0005;}
-    else {                            plotinfo.nbins = 100;  plotinfo.min = -0.001; plotinfo.max = 0.001; }
+    if (plotSplits) {                 plotinfo.nbins = 100;  plotinfo.min = -0.1; plotinfo.max = 0.1;}
+    else {                            plotinfo.nbins = 100;  plotinfo.min = -0.1; plotinfo.max = 0.1; }
   else if (variable == "meanNormX") { plotinfo.nbins = 100; plotinfo.min = -2.0;   plotinfo.max = 2.0; }
   else if (variable == "meanNormY") { plotinfo.nbins = 100; plotinfo.min = -2.0;   plotinfo.max = 2.0; }
   else if (variable == "rmsX") {      plotinfo.nbins = 100; plotinfo.min = 0.0;    plotinfo.max = 0.1; }
@@ -675,7 +690,7 @@ void PlotAlignmentValidation::plotDMR(const std::string& variable, Int_t minHits
     std::cerr << "Unknown variable " << variable << std::endl;
     plotinfo.nbins = 100; plotinfo.min = -0.1; plotinfo.max = 0.1;
   }
-
+  
   for (int i=1; i<=6; ++i) {
 
     // Skip strip detectors if plotting any "Y" variable
@@ -692,7 +707,7 @@ void PlotAlignmentValidation::plotDMR(const std::string& variable, Int_t minHits
     if (!plotinfo.plotPlain && !plotinfo.plotSplits) {
       continue;
     }
-
+    
     // Sets dimension of legend according to the number of plots
 
     bool hasheader = (TkAlStyle::legendheader != "");
@@ -779,13 +794,21 @@ void PlotAlignmentValidation::plotDMR(const std::string& variable, Int_t minHits
 	  }
 	  if (plotinfo.h1) { setDMRHistStyleAndLegend(plotinfo.h1, plotinfo, -1, layer); }
 	  if (plotinfo.h2) { setDMRHistStyleAndLegend(plotinfo.h2, plotinfo, 1, layer); }
+	  
 	}
 
       }
+      
+      if(plotinfo.variable == "medianX" || plotinfo.variable =="medianY")
+      {
+      setxaxis(plotinfo.h, xScale, xScaleValue);
+      std::cout << plotinfo.h->GetXaxis()->GetXmin() << " " << plotinfo.h->GetXaxis()->GetXmax() << "b" << std::endl;
+      }
 
-    }
-
+    }      
+      
     if (hstack.GetHists()!=0 && hstack.GetHists()->GetSize()!=0) {
+      
       hstack.Draw("nostack");
       hstack.SetMaximum(plotinfo.maxY*1.3);
       setTitleStyle(hstack, variable.c_str(), "#modules", plotinfo.subDetId);
@@ -793,17 +816,39 @@ void PlotAlignmentValidation::plotDMR(const std::string& variable, Int_t minHits
 
       plotinfo.legend->Draw(); 
     }
+      
+       
     else {
       // Draw an empty default histogram
       plotinfo.h = new TH1F("defhist", "Empty default histogram", plotinfo.nbins, plotinfo.min, plotinfo.max);
+     	
       plotinfo.h->SetMaximum(10);
-      if (plotinfo.variable.find("Norm") == std::string::npos)
-        scaleXaxis(plotinfo.h, 10000);
+      
+      
+      
+      if (plotinfo.variable.find("Norm") == std::string::npos && (plotinfo.variable!="medianX" || plotinfo.variable!="medianY"))
+      {scaleXaxis(plotinfo.h, 10000);}
       setTitleStyle(*plotinfo.h, variable.c_str(), "#modules", plotinfo.subDetId);
       setHistStyle(*plotinfo.h, variable.c_str(), "#modules", 1);
       plotinfo.h->Draw();
     }
-
+    
+    if(plotinfo.plotSplits && (variable=="medianX" || variable=="medianY"))
+    {
+      paraDMR[0]=plotinfo.h->GetRMS(1)*10000;
+      paraDMR[1]=plotinfo.h->GetMean(1)*10000;
+      paraDMR[2]=(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1))*10000;
+    std::cout << paraDMR[0] << paraDMR[1] << paraDMR[2] << std::endl;
+    }
+    else if(variable=="medianX" || variable=="medianY")
+    {
+    std::cout << "blubdibla" << std::endl;
+      paraDMR[0]=plotinfo.h->GetRMS(1)*10000;
+      paraDMR[1]=plotinfo.h->GetMean(1)*10000;
+      paraDMR[2]=0;
+    std::cout << paraDMR[0] << paraDMR[1] << paraDMR[2] << std::endl;
+    }
+      
     std::ostringstream plotName;
     plotName << outputDir << "/D";
 
@@ -818,15 +863,74 @@ void PlotAlignmentValidation::plotDMR(const std::string& variable, Int_t minHits
     else if (variable=="rmsNormX") plotName << "rmsNR_";
     else if (variable=="rmsNormY") plotName << "rmsNYR_";
 
+    TBranch *branch1;
+    TBranch *branch2;
+    TBranch *branch3;
+    TBranch *branch4;
+    TBranch *branch5;
+    TBranch *branch6;
+    
     switch (i) {
-      case 1: plotName << "BPIX"; break;
-      case 2: plotName << "FPIX"; break;
-      case 3: plotName << "TIB"; break;
-      case 4: plotName << "TID"; break;
-      case 5: plotName << "TOB"; break;
-      case 6: plotName << "TEC"; break;
+      case 1: plotName << "BPIX";
+      if(variable == "medianX")
+      {
+	branch1=t1->Branch("BPIX", &paraDMR[0], "rms/D:mu:deltamu");	
+        branch1->Fill();
+        std::cout << paraDMR[0] << paraDMR[1] << paraDMR[2] << std::endl;
+      }
+      else if(variable == "medianY")
+      {
+	std::cout << "asdf" << std::endl;                  
+ 	branch1=t1->Branch("BPIX_Y", &paraDMR[0], "rms/D:mu:deltamu");
+        branch1->Fill();
+        std::cout << paraDMR[0] << paraDMR[1] << paraDMR[2] << std::endl;
+      }; break;
+      case 2: plotName << "FPIX";
+      if(variable == "medianX")
+      {
+	branch2=t1->Branch("FPIX", &paraDMR[0], "rms/D:mu:deltamu");
+        branch2->Fill();
+        std::cout << "wubbeldiwubwub " << paraDMR[0] << paraDMR[1] << paraDMR[2] << std::endl;
+      }
+      else if(variable == "medianY")
+      {
+	branch2=t1->Branch("FPIX_Y", &paraDMR[0], "rms/D:mu:deltamu");
+        branch2->Fill();
+      }; break;
+      case 3: plotName << "TIB";
+	if(variable == "medianY")
+	  {
+	    break;
+	  }
+       branch3=t1->Branch("TIB", &paraDMR[0], "rms/D:mu:deltamu");
+       branch3->Fill();
+      break;
+      case 4: plotName << "TID"; 
+	if(variable == "medianY")
+	  {
+	    break;
+	  }
+       branch4=t1->Branch("TID", &paraDMR[0], "rms/D:mu:deltamu");
+       branch4->Fill();
+      break;
+      case 5: plotName << "TOB"; 
+	if(variable == "medianY")
+	  {
+	    break;
+	  }
+       branch5=t1->Branch("TOB", &paraDMR[0], "rms/D:mu:deltamu");
+       branch5->Fill();
+      break;
+      case 6: plotName << "TEC"; 
+	if(variable == "medianY")
+	  {
+	    break;
+	  }
+       branch6=t1->Branch("TEC", &paraDMR[0], "rms/D:mu:deltamu");
+       branch6->Fill();
+      break;
     }
-
+    
     if (plotPlain && !plotSplits) { plotName << "_plain"; }
     else if (!plotPlain && plotSplits) { plotName << "_split"; }
     if (plotLayers) {
@@ -845,6 +949,7 @@ void PlotAlignmentValidation::plotDMR(const std::string& variable, Int_t minHits
       plotName << plotLayerN;
     }
 
+    
     // PNG,EPS,PDF files
     c.Update(); 
     c.Print((plotName.str() + ".png").c_str());
@@ -862,7 +967,14 @@ void PlotAlignmentValidation::plotDMR(const std::string& variable, Int_t minHits
     delete plotinfo.h2;
 
   }
-
+  
+    t1->SetEntries(-1);
+  std::string outputtree=outputDir+"/parameter.root";
+  TFile para(outputtree.c_str(),"update");
+  t1->Write();
+  para.Write();
+  para.Close();
+  
 }
 
 //------------------------------------------------------------------------------
@@ -1407,6 +1519,7 @@ setDMRHistStyleAndLegend(TH1F* h, PlotAlignmentValidation::DMRPlotInfo& plotinfo
 
   // Legend: Statistics
   double mean, meanerror, rms, rmserror;
+  float deltamu=0;
   TString rmsname, units;
   bool showdeltamu = (plotinfo.h1 != 0 && plotinfo.h2 != 0 && plotinfo.plotSplits && plotinfo.plotPlain && direction == 0);
   if (plotinfo.variable == "medianX" || plotinfo.variable == "meanX" ||
@@ -1462,7 +1575,7 @@ setDMRHistStyleAndLegend(TH1F* h, PlotAlignmentValidation::DMRPlotInfo& plotinfo
 	plotinfo.variable == "rmsNormX" || plotinfo.variable == "rmsNormY") {
       factor = 1.0f;
     }
-    float deltamu = factor*(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1));
+    deltamu = factor*(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1));
     legend << "#Delta#mu = " << deltamu << units;
     if ((showModules_ || showUnderOverFlow_) && !twolines_)
       legend << ", ";
@@ -1487,8 +1600,8 @@ setDMRHistStyleAndLegend(TH1F* h, PlotAlignmentValidation::DMRPlotInfo& plotinfo
   plotinfo.legend->AddEntry((TObject*)0, legend.str().c_str(), "");
 
   // Scale the x-axis (cm to um), if needed
-  if (plotinfo.variable.find("Norm") == std::string::npos)
-    scaleXaxis(h, 10000);
+  if (plotinfo.variable.find("Norm") == std::string::npos && plotinfo.variable.find("median") == std::string::npos){
+    scaleXaxis(h, 10000);}
 
 }
 
@@ -1508,7 +1621,7 @@ plotDMRHistogram(PlotAlignmentValidation::DMRPlotInfo& plotinfo, int direction, 
     if (direction == -1) { plotinfo.h1 = h; }
     else if (direction == 1) { plotinfo.h2 = h; }
     else { plotinfo.h = h; }
-  }
+  } 
 }
 
 void PlotAlignmentValidation::modifySSHistAndLegend(THStack* hs, TLegend* legend)
@@ -1558,4 +1671,47 @@ void PlotAlignmentValidation::modifySSHistAndLegend(THStack* hs, TLegend* legend
 
   // Make some room for the legend
   hs->SetMaximum(hs->GetMaximum("nostack PE")*1.3);
+}
+
+void PlotAlignmentValidation::setxaxis(TH1* hist, const std::string& xScale, const std::string& xScaleValue)
+{
+    
+      double xmins=0;
+      double xmaxs=0;
+      size_t pos=0;
+      Int_t outmax=0;
+      if(xScale.find("minmax")!=std::string::npos)		// change values if xScaleMod=minmax
+      {
+	if ( ! (istringstream(xScaleValue) >> xmins) ) xmins = 0;
+	pos=xScaleValue.find(" ");
+	std::string x2=xScaleValue.substr(pos+1);
+	if ( ! (istringstream(x2) >> xmaxs) ) xmaxs = 0;
+	xmins=0.001*xmins;
+	xmaxs=0.001*xmaxs;
+      }
+      if(xScale.find("outlier")!=std::string::npos)		// set scale to include all outliers
+      {
+	outmax=hist->FindLastBinAbove(0,1);
+	if(abs(hist->FindFirstBinAbove(0,1))>outmax)
+	{
+	  outmax=abs(hist->FindFirstBinAbove(0,1));
+	} 
+	xmins=hist->GetXaxis()->GetBinLowEdge(-outmax);
+	xmaxs=hist->GetXaxis()->GetBinUpEdge(outmax);
+      }
+      if(xScale.find("factor")!=std::string::npos)		// change values if xScaleMod=factor
+      {
+	{
+	double sigma=0;
+	double mean=0;
+	int nfac;
+	if ( ! (istringstream(xScaleValue) >> nfac) ) nfac = 0;
+	std::cout << hist->GetRMS(1) << std::endl;
+	sigma=hist->GetRMS(1);
+	mean=hist->GetMean(1);
+	xmins=mean-nfac*sigma;
+	xmaxs=mean+nfac*sigma;
+	}
+      }
+      hist->GetXaxis()->SetLimits(xmins, xmaxs);
 }
