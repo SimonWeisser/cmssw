@@ -587,394 +587,570 @@ void PlotAlignmentValidation::plotSS( const std::string& options, const std::str
 //------------------------------------------------------------------------------
 void PlotAlignmentValidation::plotDMR(const std::string& variable, Int_t minHits, const std::string& options, const std::string& xScale, const std::string& xScaleValue)
 {
-  // If several, comma-separated values are given in 'variable',
-  // call plotDMR with each value separately.
-  // If a comma is found, the string is divided to two.
-  // (no space allowed)
-  std::size_t findres = variable.find(",");
-  if ( findres != std::string::npos) {
-    std::string substring1 = variable.substr(0,         findres);
-    std::string substring2 = variable.substr(findres+1, std::string::npos);
-    plotDMR(substring1, minHits, options, xScale, xScaleValue);
-    plotDMR(substring2, minHits, options, xScale, xScaleValue);
-    return;
-   }
-
-  // Variable name should end with X or Y. If it doesn't, recursively calls plotDMR twice with
-  // X and Y added, respectively
-  if (variable == "mean" || variable == "median" || variable == "meanNorm" ||
-      variable == "rms" || variable == "rmsNorm") {
-    plotDMR(variable+"X", minHits, options, xScale, xScaleValue);
-    plotDMR(variable+"Y", minHits, options, xScale, xScaleValue);
-    return;
-  }
-
-  // options: 
-  // -plain (default, the whole distribution)
-  // -split (distribution splitted to two)
-  // -layers (plain db for each layer/disc superimposed in one plot)
-  // -layersSeparate (plain db for each layer/disc in separate plots)
-  // -layersSplit (splitted db for each layers/disc in one plot)
-  // -layersSplitSeparate (splitted db, for each layers/disc in separate plots)
-
-    TTree *t1=new TTree();
-    if(variable == "medianX")
+    // If several, comma-separated values are given in 'variable',
+    // call plotDMR with each value separately.
+    // If a comma is found, the string is divided to two.
+    // (no space allowed)
+    std::size_t findres = variable.find(",");
+    if ( findres != std::string::npos) 
     {
-      t1=new TTree("parameter", "DMR parameter");
+        std::string substring1 = variable.substr(0,         findres);
+        std::string substring2 = variable.substr(findres+1, std::string::npos);
+        plotDMR(substring1, minHits, options, xScale, xScaleValue);
+        plotDMR(substring2, minHits, options, xScale, xScaleValue);
+        return;
     }
-    else if(variable == "medianY")
+
+    // Variable name should end with X or Y. If it doesn't, recursively calls plotDMR twice with
+    // X and Y added, respectively
+    if (variable == "mean" || variable == "median" || variable == "meanNorm" ||  variable == "rms" || variable == "rmsNorm")
     {
-      t1=new TTree("parameterY", "DMR parameter y-axis");  
-    }
-  double paraDMR[3];
-  
-  TRegexp layer_re("layer=[0-9]+");
-  bool plotPlain = false, plotSplits = false, plotLayers = false;
-  int plotLayerN = 0;
-  Ssiz_t index, len;
-  if (options.find("plain") != std::string::npos) { plotPlain = true; }
-  if (options.find("split") != std::string::npos) { plotSplits = true; }
-  if (options.find("layers") != std::string::npos) { plotLayers = true; }
-  if ((index = layer_re.Index(options, &len)) != -1) {
-    if (plotLayers) {
-      std::cerr << "Warning: option 'layers' overrides 'layer=N'" << std::endl;
-    } else {
-      std::string substr = options.substr(index+6, len-6);
-      plotLayerN = atoi(substr.c_str());
-    }
-  }
-
-  // Defaults to plotting only plain plot if empty (or invalid)
-  // option string is given
-  if (!plotPlain && !plotSplits) { plotPlain = true; }
-
-  // This boolean array tells for which detector modules to plot split DMR plots
-  // They are plotted for BPIX, FPIX, TIB and TOB
-  static bool plotSplitsFor[6] = { true, true, true, false, true, false };
-
-  // If layers are plotted, these are the numbers of layers for each subdetector
-  static int numberOfLayers[6] = { 3, 2, 4, 3, 6, 9 };
-
-  DMRPlotInfo plotinfo;
-
-  gStyle->SetOptStat(0);
-  
-  TCanvas c("canv", "canv");
-
-  plotinfo.variable = variable;
-  plotinfo.minHits = minHits;
-  plotinfo.plotPlain = plotPlain;
-  plotinfo.plotLayers = plotLayers;
-
-  // width in cm
-  // for DMRS, use 100 bins in range +-10 um, bin width 0.2um
-  // if modified, check also TrackerOfflineValidationSummary_cfi.py and TrackerOfflineValidation_Standalone_cff.py
-  
-
-  
-  if (variable == "meanX") {          plotinfo.nbins = 50;  plotinfo.min = -0.001; plotinfo.max = 0.001; }
-  else if (variable == "meanY") {     plotinfo.nbins = 50;  plotinfo.min = -0.005; plotinfo.max = 0.005; }
-  else if (variable == "medianX")
-    if (plotSplits) {                 plotinfo.nbins = 100;  plotinfo.min = 0.1; plotinfo.max = 0.1;}
-    else {                            plotinfo.nbins = 100;  plotinfo.min = 0.1; plotinfo.max = 0.1; }
-  else if (variable == "medianY")
-    if (plotSplits) {                 plotinfo.nbins = 100;  plotinfo.min = -0.1; plotinfo.max = 0.1;}
-    else {                            plotinfo.nbins = 100;  plotinfo.min = -0.1; plotinfo.max = 0.1; }
-  else if (variable == "meanNormX") { plotinfo.nbins = 100; plotinfo.min = -2.0;   plotinfo.max = 2.0; }
-  else if (variable == "meanNormY") { plotinfo.nbins = 100; plotinfo.min = -2.0;   plotinfo.max = 2.0; }
-  else if (variable == "rmsX") {      plotinfo.nbins = 100; plotinfo.min = 0.0;    plotinfo.max = 0.1; }
-  else if (variable == "rmsY") {      plotinfo.nbins = 100; plotinfo.min = 0.0;    plotinfo.max = 0.1; }
-  else if (variable == "rmsNormX") {  plotinfo.nbins = 100; plotinfo.min = 0.3;    plotinfo.max = 1.8; }
-  else if (variable == "rmsNormY") {  plotinfo.nbins = 100; plotinfo.min = 0.3;    plotinfo.max = 1.8; }
-  else {
-    std::cerr << "Unknown variable " << variable << std::endl;
-    plotinfo.nbins = 100; plotinfo.min = -0.1; plotinfo.max = 0.1;
-  }
-  
-  for (int i=1; i<=6; ++i) {
-
-    // Skip strip detectors if plotting any "Y" variable
-    if (i != 1 && i != 2 && variable.length() > 0 && variable[variable.length()-1] == 'Y') {
-      continue;
-    }
- 
-    // Skips plotting too high layers
-    if (plotLayerN > numberOfLayers[i-1]) {
-      continue;
+        plotDMR(variable+"X", minHits, options, xScale, xScaleValue);
+        plotDMR(variable+"Y", minHits, options, xScale, xScaleValue);
+        return;
     }
 
-    plotinfo.plotSplits = plotSplits && plotSplitsFor[i-1];
-    if (!plotinfo.plotPlain && !plotinfo.plotSplits) {
-      continue;
+    // options: 
+    // -plain (default, the whole distribution)
+    // -split (distribution splitted to two)
+    // -layers (plain db for each layer/disc superimposed in one plot)
+    // -layersSeparate (plain db for each layer/disc in separate plots)
+    // -layersSplit (splitted db for each layers/disc in one plot)
+    // -layersSplitSeparate (splitted db, for each layers/disc in separate plots)
+
+    std::string outputtree=outputDir+"/parameter.root";             //outputfile of tree with DMR-parameters
+    std::array<double,2> xrange;
+    xrange[0]=1000;
+    xrange[1]=1000;
+    
+    TRegexp layer_re("layer=[0-9]+");
+    bool plotPlain = false, plotSplits = false, plotLayers = false;
+    int plotLayerN = 0;
+    Ssiz_t index, len;
+    if (options.find("plain") != std::string::npos)
+    {
+        plotPlain = true;
+    }
+    if (options.find("split") != std::string::npos)
+    {
+        plotSplits = true;
+    }
+    if (options.find("layers") != std::string::npos)
+    {
+        plotLayers = true; 
+    }
+    if ((index = layer_re.Index(options, &len)) != -1) 
+    {
+        if (plotLayers) 
+        {
+            std::cerr << "Warning: option 'layers' overrides 'layer=N'" << std::endl;
+        }
+        else
+        {
+            std::string substr = options.substr(index+6, len-6);
+            plotLayerN = atoi(substr.c_str());
+        }
     }
     
-    // Sets dimension of legend according to the number of plots
-
-    bool hasheader = (TkAlStyle::legendheader != "");
-
-    int nPlots = 1;
-    if (plotinfo.plotSplits) { nPlots = 3; }
-    if (plotinfo.plotLayers) { nPlots *= numberOfLayers[i-1]; }
-    nPlots *= sourceList.size();
-    if (twolines_) { nPlots *= 2; }
-    nPlots += hasheader;
-
-    double legendY = 0.80;
-    if (nPlots > 3) { legendY -= 0.01 * (nPlots - 3); }
-    if (bigtext_) { legendY -= 0.05; }
-    if (legendY < 0.6) {
-      std::cerr << "Warning: Huge legend!" << std::endl;
-      legendY = 0.6;
+    // Defaults to plotting only plain plot if empty (or invalid)
+    // option string is given
+    if (!plotPlain && !plotSplits)
+    {
+        plotPlain = true; 
     }
 
-    THStack hstack("hstack", "hstack");
-    plotinfo.maxY = 0;
-    plotinfo.subDetId = i;
-    plotinfo.nLayers = numberOfLayers[i-1];
-    plotinfo.legend = new TLegend(0.17, legendY, 0.85, 0.88);
-    plotinfo.legend->SetNColumns(2);
-    if (hasheader) plotinfo.legend->SetHeader(TkAlStyle::legendheader);
-    if (bigtext_) plotinfo.legend->SetTextSize(TkAlStyle::textSize);
-    plotinfo.legend->SetFillStyle(0);
-    plotinfo.hstack = &hstack;
-    plotinfo.h = plotinfo.h1 = plotinfo.h2 = 0;
-    plotinfo.firsthisto = true;
+    // This boolean array tells for which detector modules to plot split DMR plots
+    // They are plotted for BPIX, FPIX, TIB and TOB
+    static bool plotSplitsFor[6] = { true, true, true, false, true, false };
+
+    // If layers are plotted, these are the numbers of layers for each subdetector
+    static int numberOfLayers[6] = { 3, 2, 4, 3, 6, 9 };
+
+    DMRPlotInfo plotinfo;
+
+    gStyle->SetOptStat(0);
+
+    TCanvas c("canv", "canv");
+
+    plotinfo.variable = variable;
+    plotinfo.minHits = minHits;
+    plotinfo.plotPlain = plotPlain;
+    plotinfo.plotLayers = plotLayers;
+
+    // width in cm
+    // for DMRS, use 100 bins in range +-10 um, bin width 0.2um
+    // if modified, check also TrackerOfflineValidationSummary_cfi.py and TrackerOfflineValidation_Standalone_cff.py
+  
+    if (variable == "meanX")
+    {
+        plotinfo.nbins = 50;  plotinfo.min = -0.001; plotinfo.max = 0.001;
+    }
+    else if (variable == "meanY")
+    {
+        plotinfo.nbins = 50;  plotinfo.min = -0.005; plotinfo.max = 0.005;
+    }
+    else if (variable == "medianX")
+    {
+        if (plotSplits)
+        {
+            plotinfo.nbins = 100;  plotinfo.min = 0.1; plotinfo.max = 0.1;
+        }
+        else
+        {
+            plotinfo.nbins = 100;  plotinfo.min = 0.1; plotinfo.max = 0.1;
+        }
+    }
+    else if (variable == "medianY")
+    {
+        if (plotSplits)
+        {
+            plotinfo.nbins = 100;  plotinfo.min = -0.1; plotinfo.max = 0.1;
+        }
+        else
+        {
+            plotinfo.nbins = 100;  plotinfo.min = -0.1; plotinfo.max = 0.1;
+        }
+    }
+    else if (variable == "meanNormX")
+    {
+        plotinfo.nbins = 100; plotinfo.min = -2.0;   plotinfo.max = 2.0;
+    }
+    else if (variable == "meanNormY")
+    {
+        plotinfo.nbins = 100; plotinfo.min = -2.0;   plotinfo.max = 2.0;
+    }
+    else if (variable == "rmsX")
+    {
+        plotinfo.nbins = 100; plotinfo.min = 0.0;    plotinfo.max = 0.1;
+    }
+    else if (variable == "rmsY")
+    {
+        plotinfo.nbins = 100; plotinfo.min = 0.0;    plotinfo.max = 0.1;
+    }
+    else if (variable == "rmsNormX")
+    {
+        plotinfo.nbins = 100; plotinfo.min = 0.3;    plotinfo.max = 1.8;
+    }
+    else if (variable == "rmsNormY")
+    {
+        plotinfo.nbins = 100; plotinfo.min = 0.3;    plotinfo.max = 1.8;
+    }
+    else
+    {
+        std::cerr << "Unknown variable " << variable << std::endl;
+        plotinfo.nbins = 100; plotinfo.min = -0.1; plotinfo.max = 0.1;
+    }
     
-    for(std::vector<TkOfflineVariables*>::iterator it = sourceList.begin();
-	it != sourceList.end(); ++it) {
-
-      int minlayer = plotLayers ? 1 : plotLayerN;
-      int maxlayer = plotLayers ? plotinfo.nLayers : plotLayerN;
-
-      plotinfo.vars = *it;
-      plotinfo.h1 = plotinfo.h2 = plotinfo.h = 0;
-
-      for (int layer = minlayer; layer <= maxlayer; layer++) {
-
-	if (plotinfo.plotPlain) {
-	  plotDMRHistogram(plotinfo, 0, layer);
-	}
-
-	if (plotinfo.plotSplits) {
-	  plotDMRHistogram(plotinfo, -1, layer);
-	  plotDMRHistogram(plotinfo, 1, layer);
-	}
-
-	if (plotinfo.plotPlain) {
-	  if (plotinfo.h) { setDMRHistStyleAndLegend(plotinfo.h, plotinfo, 0, layer); }
-	}
-
-	if (plotinfo.plotSplits) {
-	  // Add delta mu to the histogram
-	  if (plotinfo.h1 != 0 && plotinfo.h2 != 0 && !plotinfo.plotPlain) {
-	    std::ostringstream legend;
-	    std::string unit = " #mum";
-	    legend.precision(3);
-	    legend << fixed; // to always show 3 decimals
-	    float factor = 10000.0f;
-	    if (plotinfo.variable == "meanNormX" || plotinfo.variable == "meanNormY" ||
-		plotinfo.variable == "rmsNormX" || plotinfo.variable == "rmsNormY") {
-	      factor = 1.0f;
-	      unit = "";
-	    }
-	    float deltamu = factor*(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1));
-	    legend << plotinfo.vars->getName();
-	    if (layer > 0) {
-	      // TEC and TID have discs, the rest have layers
-	      if (i==4 || i==6)
-	        legend << ", disc ";
-	      else
-	        legend << ", layer ";
-	      legend << layer;
-	    }
-	    plotinfo.legend->AddEntry(static_cast<TObject*>(0), legend.str().c_str(), "");
-	    legend.str("");
-	    legend << "#Delta#mu = " << deltamu << unit;
-	    plotinfo.legend->AddEntry(static_cast<TObject*>(0), legend.str().c_str(), "");
-	  }
-	  if (plotinfo.h1) { setDMRHistStyleAndLegend(plotinfo.h1, plotinfo, -1, layer); }
-	  if (plotinfo.h2) { setDMRHistStyleAndLegend(plotinfo.h2, plotinfo, 1, layer); }
-	  
-	}
-
-      }
-      
-      if(plotinfo.variable == "medianX" || plotinfo.variable =="medianY")
-      {
-      setxaxis(plotinfo.h, xScale, xScaleValue);
-      std::cout << plotinfo.h->GetXaxis()->GetXmin() << " " << plotinfo.h->GetXaxis()->GetXmax() << "b" << std::endl;
-      }
-
-    }      
-      
-    if (hstack.GetHists()!=0 && hstack.GetHists()->GetSize()!=0) {
-      
-      hstack.Draw("nostack");
-      hstack.SetMaximum(plotinfo.maxY*1.3);
-      setTitleStyle(hstack, variable.c_str(), "#modules", plotinfo.subDetId);
-      setHistStyle(*hstack.GetHistogram(), variable.c_str(), "#modules", 1);
-
-      plotinfo.legend->Draw(); 
-    }
-      
+    for (int i=1; i<=6; ++i)
+    {
+        // Skip strip detectors if plotting any "Y" variable
+        if (i != 1 && i != 2 && variable.length() > 0 && variable[variable.length()-1] == 'Y')
+        {
+            continue;
+        }
+        
+        // Skips plotting too high layers
+        if (plotLayerN > numberOfLayers[i-1])
+        {
+            continue;
+        }
+        
+        plotinfo.plotSplits = plotSplits && plotSplitsFor[i-1];
+        if (!plotinfo.plotPlain && !plotinfo.plotSplits)
+        {
+            continue;
+        }
+        
+        // Sets dimension of legend according to the number of plots
+        
+        bool hasheader = (TkAlStyle::legendheader != "");
+        
+        int nPlots = 1;
+        if (plotinfo.plotSplits)
+        {
+            nPlots = 3;
+        }
+        if (plotinfo.plotLayers)
+        {
+            nPlots *= numberOfLayers[i-1];
+        }
+        nPlots *= sourceList.size();
+        if (twolines_)
+        {
+            nPlots *= 2;
+        }
+        nPlots += hasheader;
+        
+        double legendY = 0.80;
+        if (nPlots > 3)
+        {
+            legendY -= 0.01 * (nPlots - 3);
+        }
+        if (bigtext_)
+        {
+            legendY -= 0.05;
+        }
+        if (legendY < 0.6)
+        {
+            std::cerr << "Warning: Huge legend!" << std::endl;
+            legendY = 0.6;
+        }
+        
+        THStack hstack("hstack", "hstack");
+        plotinfo.maxY = 0;
+        plotinfo.subDetId = i;
+        plotinfo.nLayers = numberOfLayers[i-1];
+        plotinfo.legend = new TLegend(0.17, legendY, 0.85, 0.88);
+        plotinfo.legend->SetNColumns(2);
+        if (hasheader)
+        {
+            plotinfo.legend->SetHeader(TkAlStyle::legendheader);
+        }
+        if (bigtext_)
+        {
+            plotinfo.legend->SetTextSize(TkAlStyle::textSize);
+        }
+        plotinfo.legend->SetFillStyle(0);
+        plotinfo.hstack = &hstack;
+        plotinfo.h = plotinfo.h1 = plotinfo.h2 = 0;
+        plotinfo.firsthisto = true;
+        
+        for(std::vector<TkOfflineVariables*>::iterator it = sourceList.begin();	it != sourceList.end(); ++it)
+        {
+            TFile *para=new TFile(outputtree.c_str(),"update");
+            int listit=it-sourceList.begin();
+            
+            //open tree for current alignment, if it does not exist create new tree
+            std::string aligname=sourceList[listit]->getName();
+            if(variable == "medianY" || variable == "medianX")
+            {
+                if(para->Get(aligname.c_str())==nullptr)
+                {
+                    treebranches[aligname]=new TTree(aligname.c_str(), "DMR parameter");
+                }
+                else
+                {
+                    treebranches[aligname]=(TTree*)para->Get(aligname.c_str());
+                }
+            }
+            
+            int minlayer = plotLayers ? 1 : plotLayerN;
+            int maxlayer = plotLayers ? plotinfo.nLayers : plotLayerN;
+            
+            plotinfo.vars = *it;
+            plotinfo.h1 = plotinfo.h2 = plotinfo.h = 0;
+            
+            for (int layer = minlayer; layer <= maxlayer; layer++)
+            {
+                
+                if (plotinfo.plotPlain)
+                {
+                    plotDMRHistogram(plotinfo, 0, layer);
+                }
+                
+                if (plotinfo.plotSplits)
+                {
+                    plotDMRHistogram(plotinfo, -1, layer);
+                    plotDMRHistogram(plotinfo, 1, layer);
+                }
+                
+                if (plotinfo.plotPlain)
+                {
+                    if (plotinfo.h)
+                    {
+                        setDMRHistStyleAndLegend(plotinfo.h, plotinfo, 0, layer);
+                    }
+                }
+                
+                if (plotinfo.plotSplits)
+                {
+                    // Add delta mu to the histogram
+                    if (plotinfo.h1 != 0 && plotinfo.h2 != 0 && !plotinfo.plotPlain)
+                    {
+                        std::ostringstream legend;
+                        std::string unit = " #mum";
+                        legend.precision(3);
+                        legend << fixed; // to always show 3 decimals
+                        float factor = 10000.0f;
+                        if (plotinfo.variable == "meanNormX" || plotinfo.variable == "meanNormY" ||plotinfo.variable == "rmsNormX" || plotinfo.variable == "rmsNormY")
+                        {
+                            factor = 1.0f;
+                            unit = "";
+                        }
+                        float deltamu = factor*(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1));
+                        legend << plotinfo.vars->getName();
+                        if (layer > 0)
+                        {
+                            // TEC and TID have discs, the rest have layers
+                            if (i==4 || i==6)
+                            {
+                                legend << ", disc ";
+                            }
+                            else
+                            {
+                                legend << ", layer ";
+                            }
+                            legend << layer;
+                        }
+                        plotinfo.legend->AddEntry(static_cast<TObject*>(0), legend.str().c_str(), "");
+                        legend.str("");
+                        legend << "#Delta#mu = " << deltamu << unit;
+                        plotinfo.legend->AddEntry(static_cast<TObject*>(0), legend.str().c_str(), "");
+                    }
+                    if (plotinfo.h1)
+                    {
+                        setDMRHistStyleAndLegend(plotinfo.h1, plotinfo, -1, layer);
+                    }
+                    if (plotinfo.h2)
+                    {
+                        setDMRHistStyleAndLegend(plotinfo.h2, plotinfo, 1, layer);
+                    }
+                }
+            }
+            
+            //set x-axis range as defined in config
+            if(plotinfo.variable == "medianX" || plotinfo.variable =="medianY")
+            {
+                if(abs(setxaxis(plotinfo.h, xScale, xScaleValue)[0]) < abs(xrange[0]) && abs(setxaxis(plotinfo.h, xScale, xScaleValue)[1]) < abs(xrange[1]))
+                {
+                    xrange=setxaxis(plotinfo.h, xScale, xScaleValue);
+                    plotinfo.h->GetXaxis()->SetLimits(xrange[0],xrange[1]);
+                    if (plotinfo.plotSplits)
+                    {
+                        plotinfo.h1->GetXaxis()->SetLimits(xrange[0],xrange[1]);
+                        plotinfo.h2->GetXaxis()->SetLimits(xrange[0],xrange[1]);
+                    }
+                }
+                else
+                {
+                    plotinfo.h->GetXaxis()->SetLimits(xrange[0],xrange[1]);
+                    if (plotinfo.plotSplits)
+                    {
+                        plotinfo.h1->GetXaxis()->SetLimits(xrange[0],xrange[1]);
+                        plotinfo.h2->GetXaxis()->SetLimits(xrange[0],xrange[1]);
+                    }
+                }    
+            }
+            
+            //fill trees with branches for each subdetector (two for pixel)
+            //branches are filled with vectors of parameters
+            if(variable=="medianX" || variable=="medianY")
+            {
+                switch (i)
+                {
+                    case 1:
+                        if(variable == "medianX")
+                        {
+                            double bpix[3];
+                            bpix[0]=plotinfo.h->GetRMS(1)*10000;
+                            bpix[1]=plotinfo.h->GetMean(1)*10000;
+                            bpix[2]=(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1))*10000;
+                            if(branches["BPIX"+aligname]==nullptr)
+                            {
+                                branches["BPIX"+aligname]=treebranches[aligname]->Branch("BPIX", &bpix, "rms/D:mu:deltamu");
+                            }
+                            branches["BPIX"+aligname]->Fill();
+                        }
+                        else if(variable == "medianY")
+                        {
+                            double bpixy[3];
+                            bpixy[0]=plotinfo.h->GetRMS(1)*10000;
+                            bpixy[1]=plotinfo.h->GetMean(1)*10000;
+                            bpixy[2]=(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1))*10000;
+                            if(branches["BPIX_Y"+aligname]==nullptr)
+                            {
+                                branches["BPIX_Y"+aligname]=treebranches[aligname]->Branch("BPIX_Y", &bpixy, "rms/D:mu:deltamu");
+                            }
+                            branches["BPIX_Y"+aligname]->Fill();
+                        };
+                        break;
+                    case 2:
+                        if(variable == "medianX")
+                        {
+                            if(branches["FPIX"+aligname]==nullptr)
+                            {
+                                double fpix[3];
+                                fpix[0]=plotinfo.h->GetRMS(1)*10000;
+                                fpix[1]=plotinfo.h->GetMean(1)*10000;
+                                fpix[2]=(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1))*10000;
+                                branches["FPIX"+aligname]=treebranches[aligname]->Branch("FPIX", &fpix, "rms/D:mu:deltamu");
+                            }
+                            branches["FPIX"+aligname]->Fill();
+                        }
+                        else if(variable == "medianY")
+                        {
+                            double fpixy[3];
+                            fpixy[0]=plotinfo.h->GetRMS(1)*10000;
+                            fpixy[1]=plotinfo.h->GetMean(1)*10000;
+                            fpixy[2]=(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1))*10000;
+                            if(branches["FPIX_Y"+aligname]==nullptr)
+                            {
+                                branches["FPIX_Y"+aligname]=treebranches[aligname]->Branch("FPIX_Y", &fpixy, "rms/D:mu:deltamu");
+                            }
+                            branches["FPIX_Y"+aligname]->Fill();
+                        };
+                        break;
+                    case 3:
+                        double tib[3];
+                        tib[0]=plotinfo.h->GetRMS(1)*10000;
+                        tib[1]=plotinfo.h->GetMean(1)*10000;
+                        tib[2]=(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1))*10000;
+                        if(branches["TIB"+aligname]==nullptr)
+                        {
+                            branches["TIB"+aligname]=treebranches[aligname]->Branch("TIB", &tib, "rms/D:mu:deltamu");
+                        }
+                        branches["TIB"+aligname]->Fill();
+                        break;
+                    case 4: 
+                        double tid[2];
+                        tid[0]=plotinfo.h->GetRMS(1)*10000;
+                        tid[1]=plotinfo.h->GetMean(1)*10000;
+                        if(branches["TID"+aligname]==nullptr)
+                        {
+                            branches["TID"+aligname]=treebranches[aligname]->Branch("TID", &tid, "rms/D:mu");
+                        }
+                        branches["TID"+aligname]->Fill();
+                        break;
+                    case 5: 
+                        double tob[3];
+                        tob[0]=plotinfo.h->GetRMS(1)*10000;
+                        tob[1]=plotinfo.h->GetMean(1)*10000;
+                        tob[2]=(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1))*10000;
+                        if(branches["TOB"+aligname]==nullptr)
+                        {
+                            branches["TOB"+aligname]=treebranches[aligname]->Branch("TOB", &tob, "rms/D:mu:deltamu");
+                        }
+                        branches["TOB"+aligname]->Fill();
+                        break;
+                    case 6: 
+                        double tec[2];
+                        tec[0]=plotinfo.h->GetRMS(1)*10000;
+                        tec[1]=plotinfo.h->GetMean(1)*10000;
+                        if(branches["TEC"+aligname]==nullptr)
+                        {
+                            branches["TEC"+aligname]=treebranches[aligname]->Branch("TEC", &tec, "rms/D:mu");
+                        }
+                        branches["TEC"+aligname]->Fill();
+                        break;
+                }
+                
+                //keep only one entry per leaf and save
+                treebranches[aligname]->SetEntries(1);
+                if(plotinfo.variable == "medianX" || plotinfo.variable =="medianY")
+                {
+                    treebranches[aligname]->AutoSave("FlushBaskets");
+                    para->Write();
+                    para->Close();
+                }
+            }
+            
+            //delete previous cycles
+            para->Purge();
+            delete para;
+        }
+        
+        if (hstack.GetHists()!=0 && hstack.GetHists()->GetSize()!=0)
+        {
+            hstack.Draw("nostack");
+            hstack.SetMaximum(plotinfo.maxY*1.3);
+            setTitleStyle(hstack, variable.c_str(), "#modules", plotinfo.subDetId);
+            setHistStyle(*hstack.GetHistogram(), variable.c_str(), "#modules", 1);
+            plotinfo.legend->Draw(); 
+        }
+        
+        
+        else
+        {
+            // Draw an empty default histogram
+            plotinfo.h = new TH1F("defhist", "Empty default histogram", plotinfo.nbins, plotinfo.min, plotinfo.max);
+            plotinfo.h->SetMaximum(10);
        
-    else {
-      // Draw an empty default histogram
-      plotinfo.h = new TH1F("defhist", "Empty default histogram", plotinfo.nbins, plotinfo.min, plotinfo.max);
-     	
-      plotinfo.h->SetMaximum(10);
-      
-      
-      
-      if (plotinfo.variable.find("Norm") == std::string::npos && (plotinfo.variable!="medianX" || plotinfo.variable!="medianY"))
-      {scaleXaxis(plotinfo.h, 10000);}
-      setTitleStyle(*plotinfo.h, variable.c_str(), "#modules", plotinfo.subDetId);
-      setHistStyle(*plotinfo.h, variable.c_str(), "#modules", 1);
-      plotinfo.h->Draw();
+            if (plotinfo.variable.find("Norm") == std::string::npos && (plotinfo.variable!="medianX" || plotinfo.variable!="medianY"))
+            {
+                scaleXaxis(plotinfo.h, 10000);
+            }
+            setTitleStyle(*plotinfo.h, variable.c_str(), "#modules", plotinfo.subDetId);
+            setHistStyle(*plotinfo.h, variable.c_str(), "#modules", 1);
+            plotinfo.h->Draw();
+        }
+        
+        
+        std::ostringstream plotName;
+        plotName << outputDir << "/D";
+        
+        if (variable=="medianX") plotName << "medianR_";
+        else if (variable=="medianY") plotName << "medianYR_";
+        else if (variable=="meanX") plotName << "meanR_";
+        else if (variable=="meanY") plotName << "meanYR_";
+        else if (variable=="meanNormX") plotName << "meanNR_";
+        else if (variable=="meanNormY") plotName << "meanNYR_";
+        else if (variable=="rmsX") plotName << "rmsR_";
+        else if (variable=="rmsY") plotName << "rmsYR_";
+        else if (variable=="rmsNormX") plotName << "rmsNR_";
+        else if (variable=="rmsNormY") plotName << "rmsNYR_";
+        
+        
+        switch (i)
+        {
+            case 1: plotName << "BPIX";break;
+            case 2: plotName << "FPIX";break;
+            case 3: plotName << "TIB";break;
+            case 4: plotName << "TID";break;
+            case 5: plotName << "TOB";break;
+            case 6: plotName << "TEC";break;
+        }
+        
+        if (plotPlain && !plotSplits)
+        {
+            plotName << "_plain";
+        }
+        else if (!plotPlain && plotSplits)
+        {
+            plotName << "_split";
+        }
+        if (plotLayers)
+        {
+            // TEC and TID have discs, the rest have layers
+            if (i==4 || i==6)
+            {
+                plotName << "_discs";
+            }
+            else
+            {
+                plotName << "_layers";
+            }
+        }
+        if (plotLayerN > 0)
+        {
+            // TEC and TID have discs, the rest have layers
+            if (i==4 || i==6)
+            {
+                plotName << "_disc";
+            }
+            else
+            {
+                plotName << "_layer";
+            }
+            plotName << plotLayerN;
+        }
+        
+        
+        // PNG,EPS,PDF files
+        c.Update(); 
+        c.Print((plotName.str() + ".png").c_str());
+        c.Print((plotName.str() + ".eps").c_str());
+        c.Print((plotName.str() + ".pdf").c_str());
+        
+        // ROOT file
+        TFile f((plotName.str() + ".root").c_str(), "recreate");
+        c.Write();
+        f.Close();
+        
+        // Free allocated memory.
+        delete plotinfo.h;
+        delete plotinfo.h1;
+        delete plotinfo.h2;
     }
-    
-    if(plotinfo.plotSplits && (variable=="medianX" || variable=="medianY"))
-    {
-      paraDMR[0]=plotinfo.h->GetRMS(1)*10000;
-      paraDMR[1]=plotinfo.h->GetMean(1)*10000;
-      paraDMR[2]=(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1))*10000;
-    std::cout << paraDMR[0] << paraDMR[1] << paraDMR[2] << std::endl;
-    }
-    else if(variable=="medianX" || variable=="medianY")
-    {
-    std::cout << "blubdibla" << std::endl;
-      paraDMR[0]=plotinfo.h->GetRMS(1)*10000;
-      paraDMR[1]=plotinfo.h->GetMean(1)*10000;
-      paraDMR[2]=0;
-    std::cout << paraDMR[0] << paraDMR[1] << paraDMR[2] << std::endl;
-    }
-      
-    std::ostringstream plotName;
-    plotName << outputDir << "/D";
-
-    if (variable=="medianX") plotName << "medianR_";
-    else if (variable=="medianY") plotName << "medianYR_";
-    else if (variable=="meanX") plotName << "meanR_";
-    else if (variable=="meanY") plotName << "meanYR_";
-    else if (variable=="meanNormX") plotName << "meanNR_";
-    else if (variable=="meanNormY") plotName << "meanNYR_";
-    else if (variable=="rmsX") plotName << "rmsR_";
-    else if (variable=="rmsY") plotName << "rmsYR_";
-    else if (variable=="rmsNormX") plotName << "rmsNR_";
-    else if (variable=="rmsNormY") plotName << "rmsNYR_";
-
-    TBranch *branch1;
-    TBranch *branch2;
-    TBranch *branch3;
-    TBranch *branch4;
-    TBranch *branch5;
-    TBranch *branch6;
-    
-    switch (i) {
-      case 1: plotName << "BPIX";
-      if(variable == "medianX")
-      {
-	branch1=t1->Branch("BPIX", &paraDMR[0], "rms/D:mu:deltamu");	
-        branch1->Fill();
-        std::cout << paraDMR[0] << paraDMR[1] << paraDMR[2] << std::endl;
-      }
-      else if(variable == "medianY")
-      {
-	std::cout << "asdf" << std::endl;                  
- 	branch1=t1->Branch("BPIX_Y", &paraDMR[0], "rms/D:mu:deltamu");
-        branch1->Fill();
-        std::cout << paraDMR[0] << paraDMR[1] << paraDMR[2] << std::endl;
-      }; break;
-      case 2: plotName << "FPIX";
-      if(variable == "medianX")
-      {
-	branch2=t1->Branch("FPIX", &paraDMR[0], "rms/D:mu:deltamu");
-        branch2->Fill();
-        std::cout << "wubbeldiwubwub " << paraDMR[0] << paraDMR[1] << paraDMR[2] << std::endl;
-      }
-      else if(variable == "medianY")
-      {
-	branch2=t1->Branch("FPIX_Y", &paraDMR[0], "rms/D:mu:deltamu");
-        branch2->Fill();
-      }; break;
-      case 3: plotName << "TIB";
-	if(variable == "medianY")
-	  {
-	    break;
-	  }
-       branch3=t1->Branch("TIB", &paraDMR[0], "rms/D:mu:deltamu");
-       branch3->Fill();
-      break;
-      case 4: plotName << "TID"; 
-	if(variable == "medianY")
-	  {
-	    break;
-	  }
-       branch4=t1->Branch("TID", &paraDMR[0], "rms/D:mu:deltamu");
-       branch4->Fill();
-      break;
-      case 5: plotName << "TOB"; 
-	if(variable == "medianY")
-	  {
-	    break;
-	  }
-       branch5=t1->Branch("TOB", &paraDMR[0], "rms/D:mu:deltamu");
-       branch5->Fill();
-      break;
-      case 6: plotName << "TEC"; 
-	if(variable == "medianY")
-	  {
-	    break;
-	  }
-       branch6=t1->Branch("TEC", &paraDMR[0], "rms/D:mu:deltamu");
-       branch6->Fill();
-      break;
-    }
-    
-    if (plotPlain && !plotSplits) { plotName << "_plain"; }
-    else if (!plotPlain && plotSplits) { plotName << "_split"; }
-    if (plotLayers) {
-      // TEC and TID have discs, the rest have layers
-      if (i==4 || i==6)
-        plotName << "_discs";
-      else
-        plotName << "_layers";
-    }
-    if (plotLayerN > 0) {
-      // TEC and TID have discs, the rest have layers
-      if (i==4 || i==6)
-        plotName << "_disc";
-      else
-        plotName << "_layer";
-      plotName << plotLayerN;
-    }
-
-    
-    // PNG,EPS,PDF files
-    c.Update(); 
-    c.Print((plotName.str() + ".png").c_str());
-    c.Print((plotName.str() + ".eps").c_str());
-    c.Print((plotName.str() + ".pdf").c_str());
-
-    // ROOT file
-    TFile f((plotName.str() + ".root").c_str(), "recreate");
-    c.Write();
-    f.Close();
-    
-    // Free allocated memory.
-    delete plotinfo.h;
-    delete plotinfo.h1;
-    delete plotinfo.h2;
-
-  }
-  
-    t1->SetEntries(-1);
-  std::string outputtree=outputDir+"/parameter.root";
-  TFile para(outputtree.c_str(),"update");
-  t1->Write();
-  para.Write();
-  para.Close();
-  
 }
 
 //------------------------------------------------------------------------------
@@ -1673,7 +1849,7 @@ void PlotAlignmentValidation::modifySSHistAndLegend(THStack* hs, TLegend* legend
   hs->SetMaximum(hs->GetMaximum("nostack PE")*1.3);
 }
 
-void PlotAlignmentValidation::setxaxis(TH1* hist, const std::string& xScale, const std::string& xScaleValue)
+std::array<double,2> PlotAlignmentValidation::setxaxis(TH1* hist, const std::string& xScale, const std::string& xScaleValue)
 {
     
       double xmins=0;
@@ -1706,12 +1882,11 @@ void PlotAlignmentValidation::setxaxis(TH1* hist, const std::string& xScale, con
 	double mean=0;
 	int nfac;
 	if ( ! (istringstream(xScaleValue) >> nfac) ) nfac = 0;
-	std::cout << hist->GetRMS(1) << std::endl;
 	sigma=hist->GetRMS(1);
 	mean=hist->GetMean(1);
 	xmins=mean-nfac*sigma;
 	xmaxs=mean+nfac*sigma;
 	}
       }
-      hist->GetXaxis()->SetLimits(xmins, xmaxs);
+      return {xmins,xmaxs};
 }

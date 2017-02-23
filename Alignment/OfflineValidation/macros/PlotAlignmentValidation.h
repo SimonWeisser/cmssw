@@ -87,6 +87,8 @@ public:
   void plotHitMaps();
   void setOutputDir( std::string dir );
   void setTreeBaseDir( std::string dir = "TrackerOfflineValidationStandalone");
+  std::map<TString, TBranch*> branches;
+  std::map<std::string, TTree*> treebranches;
   
   THStack* addHists(const TString& selection, const TString &residType = "xPrime", TLegend **myLegend = 0, bool printModuleIds = false);//add hists fulfilling 'selection' on TTree; residType: xPrime,yPrime,xPrimeNorm,yPrimeNorm,x,y,xNorm; if (printModuleIds): cout DetIds
   
@@ -150,7 +152,7 @@ private :
 				    int nbins, double min, double max);
   void setDMRHistStyleAndLegend(TH1F* h, DMRPlotInfo& plotinfo, int direction = 0, int layer = 0);
   void plotDMRHistogram(DMRPlotInfo& plotinfo, int direction = 0, int layer = 0);
-  void setxaxis(TH1* hist, const std::string& xScale = "minmax", const std::string& xScaleValue =  "-5 5");
+  std::array<double,2> setxaxis(TH1* hist, const std::string& xScale = "minmax", const std::string& xScaleValue =  "-5 5");
   void modifySSHistAndLegend(THStack* hs, TLegend* legend);
 
 };
