@@ -941,25 +941,32 @@ void PlotAlignmentValidation::plotDMR(const std::string& variable, Int_t minHits
                     case 1:
                         if(variable == "medianX")
                         {
-                            double bpix[3];
+                            double bpix[6];
                             bpix[0]=plotinfo.h->GetRMS(1)*10000;
                             bpix[1]=plotinfo.h->GetMean(1)*10000;
                             bpix[2]=(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1))*10000;
+			    bpix[3]=plotinfo.h->GetRMSError(1)*10000;
+                            bpix[4]=plotinfo.h->GetMeanError(1)*10000;
+                            bpix[5]=sqrt(pow(plotinfo.h2->GetMeanError(1),2) + pow(plotinfo.h1->GetMeanError(1),2))*10000;
                             if(branches["BPIX"+aligname]==nullptr)
                             {
-                                branches["BPIX"+aligname]=treebranches[aligname]->Branch("BPIX", &bpix, "rms/D:mu:deltamu");
+                                branches["BPIX"+aligname]=treebranches[aligname]->Branch("BPIX", &bpix, "rms/D:mu:deltamu:rmserror:muerror:deltamuerror");
                             }
                             branches["BPIX"+aligname]->Fill();
+			    std::cout << branches["BPIX"+aligname]->GetListOfLeaves()->Last()->GetName() << std::endl;
                         }
                         else if(variable == "medianY")
                         {
-                            double bpixy[3];
+                            double bpixy[6];
                             bpixy[0]=plotinfo.h->GetRMS(1)*10000;
                             bpixy[1]=plotinfo.h->GetMean(1)*10000;
                             bpixy[2]=(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1))*10000;
+			    bpixy[3]=plotinfo.h->GetRMSError(1)*10000;
+                            bpixy[4]=plotinfo.h->GetMeanError(1)*10000;
+                            bpixy[5]=sqrt(pow(plotinfo.h2->GetMeanError(1),2) + pow(plotinfo.h1->GetMeanError(1),2))*10000;
                             if(branches["BPIX_Y"+aligname]==nullptr)
                             {
-                                branches["BPIX_Y"+aligname]=treebranches[aligname]->Branch("BPIX_Y", &bpixy, "rms/D:mu:deltamu");
+                                branches["BPIX_Y"+aligname]=treebranches[aligname]->Branch("BPIX_Y", &bpixy, "rms/D:mu:deltamu:rmserror:muerror:deltamuerror");
                             }
                             branches["BPIX_Y"+aligname]->Fill();
                         };
@@ -967,68 +974,84 @@ void PlotAlignmentValidation::plotDMR(const std::string& variable, Int_t minHits
                     case 2:
                         if(variable == "medianX")
                         {
+			    double fpix[6];
+			    fpix[0]=plotinfo.h->GetRMS(1)*10000;
+			    fpix[1]=plotinfo.h->GetMean(1)*10000;
+			    fpix[2]=(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1))*10000;
+			    fpix[3]=plotinfo.h->GetRMSError(1)*10000;
+                            fpix[4]=plotinfo.h->GetMeanError(1)*10000;
+                            fpix[5]=sqrt(pow(plotinfo.h2->GetMeanError(1),2) + pow(plotinfo.h1->GetMeanError(1),2))*10000;
                             if(branches["FPIX"+aligname]==nullptr)
                             {
-                                double fpix[3];
-                                fpix[0]=plotinfo.h->GetRMS(1)*10000;
-                                fpix[1]=plotinfo.h->GetMean(1)*10000;
-                                fpix[2]=(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1))*10000;
-                                branches["FPIX"+aligname]=treebranches[aligname]->Branch("FPIX", &fpix, "rms/D:mu:deltamu");
+                                branches["FPIX"+aligname]=treebranches[aligname]->Branch("FPIX", &fpix, "rms/D:mu:deltamu:rmserror:muerror:deltamuerror");
                             }
                             branches["FPIX"+aligname]->Fill();
                         }
                         else if(variable == "medianY")
                         {
-                            double fpixy[3];
+                            double fpixy[6];
                             fpixy[0]=plotinfo.h->GetRMS(1)*10000;
                             fpixy[1]=plotinfo.h->GetMean(1)*10000;
                             fpixy[2]=(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1))*10000;
+			    fpixy[3]=plotinfo.h->GetRMSError(1)*10000;
+                            fpixy[4]=plotinfo.h->GetMeanError(1)*10000;
+                            fpixy[5]=sqrt(pow(plotinfo.h2->GetMeanError(1),2) + pow(plotinfo.h1->GetMeanError(1),2))*10000;
                             if(branches["FPIX_Y"+aligname]==nullptr)
                             {
-                                branches["FPIX_Y"+aligname]=treebranches[aligname]->Branch("FPIX_Y", &fpixy, "rms/D:mu:deltamu");
+                                branches["FPIX_Y"+aligname]=treebranches[aligname]->Branch("FPIX_Y", &fpixy, "rms/D:mu:deltamu:rmserror:muerror:deltamuerror");
                             }
                             branches["FPIX_Y"+aligname]->Fill();
                         };
                         break;
                     case 3:
-                        double tib[3];
+                        double tib[6];
                         tib[0]=plotinfo.h->GetRMS(1)*10000;
                         tib[1]=plotinfo.h->GetMean(1)*10000;
                         tib[2]=(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1))*10000;
+			tib[3]=plotinfo.h->GetRMSError(1)*10000;
+                        tib[4]=plotinfo.h->GetMeanError(1)*10000;
+                        tib[5]=sqrt(pow(plotinfo.h2->GetMeanError(1),2) + pow(plotinfo.h1->GetMeanError(1),2))*10000;
                         if(branches["TIB"+aligname]==nullptr)
                         {
-                            branches["TIB"+aligname]=treebranches[aligname]->Branch("TIB", &tib, "rms/D:mu:deltamu");
+                            branches["TIB"+aligname]=treebranches[aligname]->Branch("TIB", &tib, "rms/D:mu:deltamu:rmserror:muerror:deltamuerror");
                         }
                         branches["TIB"+aligname]->Fill();
                         break;
                     case 4: 
-                        double tid[2];
+                        double tid[4];
                         tid[0]=plotinfo.h->GetRMS(1)*10000;
                         tid[1]=plotinfo.h->GetMean(1)*10000;
+			tid[2]=plotinfo.h->GetRMSError(1)*10000;
+                        tid[3]=plotinfo.h->GetMeanError(1)*10000;
                         if(branches["TID"+aligname]==nullptr)
                         {
-                            branches["TID"+aligname]=treebranches[aligname]->Branch("TID", &tid, "rms/D:mu");
+                            branches["TID"+aligname]=treebranches[aligname]->Branch("TID", &tid, "rms/D:mu:rmserror:muerror");
                         }
                         branches["TID"+aligname]->Fill();
                         break;
                     case 5: 
-                        double tob[3];
+                        double tob[6];
                         tob[0]=plotinfo.h->GetRMS(1)*10000;
                         tob[1]=plotinfo.h->GetMean(1)*10000;
                         tob[2]=(plotinfo.h2->GetMean(1) - plotinfo.h1->GetMean(1))*10000;
+			tob[3]=plotinfo.h->GetRMSError(1)*10000;
+                        tob[4]=plotinfo.h->GetMeanError(1)*10000;
+                        tob[5]=sqrt(pow(plotinfo.h2->GetMeanError(1),2) + pow(plotinfo.h1->GetMeanError(1),2))*10000;
                         if(branches["TOB"+aligname]==nullptr)
                         {
-                            branches["TOB"+aligname]=treebranches[aligname]->Branch("TOB", &tob, "rms/D:mu:deltamu");
+                            branches["TOB"+aligname]=treebranches[aligname]->Branch("TOB", &tob, "rms/D:mu:deltamu:rmserror:muerror:deltamuerror");
                         }
                         branches["TOB"+aligname]->Fill();
                         break;
                     case 6: 
-                        double tec[2];
+                        double tec[4];
                         tec[0]=plotinfo.h->GetRMS(1)*10000;
                         tec[1]=plotinfo.h->GetMean(1)*10000;
+			tec[2]=plotinfo.h->GetRMSError(1)*10000;
+                        tec[3]=plotinfo.h->GetMeanError(1)*10000;
                         if(branches["TEC"+aligname]==nullptr)
                         {
-                            branches["TEC"+aligname]=treebranches[aligname]->Branch("TEC", &tec, "rms/D:mu");
+                            branches["TEC"+aligname]=treebranches[aligname]->Branch("TEC", &tec, "rms/D:mu:rmserror:muerror");
                         }
                         branches["TEC"+aligname]->Fill();
                         break;
